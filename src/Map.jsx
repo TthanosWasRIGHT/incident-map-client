@@ -32,40 +32,45 @@ const Map = () => {
       zoom: 6,
     });
 
-    const incidentsRef = ref(db, 'incidents/');
-    onValue(incidentsRef, (snapshot) => {
-      const data = snapshot.val();
-      if (!data) return;
+    map.current.on('load', () => {
+      const incidentsRef = ref(db, 'incidents/');
+      onValue(incidentsRef, (snapshot) => {
+        const data = snapshot.val();
+        if (!data) return;
 
-      const features = Object.values(data)
-        .filter(i => i.lat && i.lon)
-        .map(incident => ({
-          type: 'Feature',
-          geometry: {
-            type: 'Point',
-            coordinates: [parseFloat(incident.lon), parseFloat(incident.lat)],
-          },
-          properties: {
-            county: incident.county || 'N/A',
-            time: incident.time || 'N/A',
-            actor: incident.actor || 'N/A',
-            weight: 1, // assign default weight
-          },
-        }));
+        const features = Object.values(data)
+          .filter(i => i.lat && i.lon)
+          .map(incident => ({
+            type: 'Feature',
+            geometry: {
+              type: 'Point',
+              coordinates: [parseFloat(incident.lon), parseFloat(incident.lat)],
+            },
+            properties: {
+              county: incident.county || 'N/A',
+              time: incident.time || 'N/A',
+              actor: incident.actor || 'N/A',
+              weight: 1,
+            },
+          }));
 
-      const geojson = {
-        type: 'FeatureCollection',
-        features,
-      };
+        const geojson = {
+          type: 'FeatureCollection',
+          features,
+        };
 
-      map.current.on('load', () => {
+        // Add or update source
         if (!map.current.getSource('incidents')) {
           map.current.addSource('incidents', {
             type: 'geojson',
             data: geojson,
           });
+        } else {
+          map.current.getSource('incidents').setData(geojson);
+        }
 
-          // Heatmap layer
+        // Heatmap layer
+        if (!map.current.getLayer('heatmap')) {
           map.current.addLayer({
             id: 'heatmap',
             type: 'heatmap',
@@ -89,8 +94,10 @@ const Map = () => {
               ],
             },
           });
+        }
 
-          // Circle layer for interactivity
+        // Points layer for interaction
+        if (!map.current.getLayer('points')) {
           map.current.addLayer({
             id: 'points',
             type: 'circle',
@@ -98,37 +105,37 @@ const Map = () => {
             paint: {
               'circle-radius': 6,
               'circle-color': '#000',
-              'circle-opacity': 0, // hidden circles, just for hover
+              'circle-opacity': 0,
             },
           });
-
-          // Hover popup logic
-          let popup;
-          map.current.on('mousemove', 'points', (e) => {
-            const props = e.features[0].properties;
-            const coords = e.features[0].geometry.coordinates.slice();
-
-            if (popup) popup.remove();
-
-            popup = new mapboxgl.Popup({ closeButton: false, closeOnClick: false })
-              .setLngLat(coords)
-              .setHTML(`
-                <div style="background-color: rgba(0,0,0,0.85); padding: 14px 16px; border-radius: 10px; color: white; font-family: sans-serif; max-width: 250px;">
-                  <strong>COUNTY:</strong> ${props.county}<br/>
-                  <strong>TIME:</strong> ${props.time}<br/>
-                  <strong>ACTOR:</strong> ${props.actor}
-                </div>
-              `)
-              .addTo(map.current);
-          });
-
-          map.current.on('mouseleave', 'points', () => {
-            if (popup) {
-              popup.remove();
-              popup = null;
-            }
-          });
         }
+
+        // Tooltip hover logic
+        let popup;
+        map.current.on('mousemove', 'points', (e) => {
+          const props = e.features[0].properties;
+          const coords = e.features[0].geometry.coordinates.slice();
+
+          if (popup) popup.remove();
+
+          popup = new mapboxgl.Popup({ closeButton: false, closeOnClick: false })
+            .setLngLat(coords)
+            .setHTML(`
+              <div style="background-color: rgba(0,0,0,0.85); padding: 14px 16px; border-radius: 10px; color: white; font-family: sans-serif; max-width: 250px;">
+                <strong>COUNTY:</strong> ${props.county}<br/>
+                <strong>TIME:</strong> ${props.time}<br/>
+                <strong>ACTOR:</strong> ${props.actor}
+              </div>
+            `)
+            .addTo(map.current);
+        });
+
+        map.current.on('mouseleave', 'points', () => {
+          if (popup) {
+            popup.remove();
+            popup = null;
+          }
+        });
       });
     });
   }, []);
