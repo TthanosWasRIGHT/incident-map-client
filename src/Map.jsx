@@ -124,7 +124,7 @@ const Map = () => {
               <div style="background-color: rgba(0,0,0,0.85); padding: 14px 16px; border-radius: 10px; color: white; font-family: sans-serif; max-width: 250px;">
                 <strong>COUNTY:</strong> ${props.county}<br/>
                 <strong>TIME:</strong> ${props.time}<br/>
-                <strong>INCIDENT CATEGORY:</strong> ${props.title}
+                <strong>INCIDENT:</strong> ${props.title}
               </div>
             `)
             .addTo(map.current);
