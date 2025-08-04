@@ -33,6 +33,11 @@ const Map = () => {
     });
 
     map.current.on('load', () => {
+      // Find the first symbol layer to insert heatmap below it (so labels show above)
+      const labelLayerId = map.current.getStyle().layers.find(
+        layer => layer.type === 'symbol' && layer.layout?.['text-field']
+      )?.id;
+
       const incidentsRef = ref(db, 'incidents/');
       onValue(incidentsRef, (snapshot) => {
         const data = snapshot.val();
@@ -69,7 +74,7 @@ const Map = () => {
           map.current.getSource('incidents').setData(geojson);
         }
 
-        // Heatmap layer
+        // Heatmap layer (added below labels)
         if (!map.current.getLayer('heatmap')) {
           map.current.addLayer({
             id: 'heatmap',
@@ -93,7 +98,7 @@ const Map = () => {
                 1, 'red',
               ],
             },
-          });
+          }, labelLayerId); // Insert below label layer
         }
 
         // Points layer for interaction
